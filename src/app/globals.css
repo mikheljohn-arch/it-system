@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0a0f1a;
+  --bg-secondary: #111827;
+  --bg-card: #151e2d;
+  --bg-hover: #1a2535;
+  --border: #1e2d40;
+  --border-hover: #2d4057;
+  --text-primary: #f0f6ff;
+  --text-secondary: #8ba3be;
+  --text-muted: #4d6480;
+  --accent-blue: #3b82f6;
+  --accent-blue-dim: #1d4ed8;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-purple: #8b5cf6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border p-5;
+    background: var(--bg-card);
+    border-color: var(--border);
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150;
+    background: var(--accent-blue);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--accent-blue-dim); }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150 border;
+    background: var(--bg-hover);
+    border-color: var(--border);
+    color: var(--text-primary);
+  }
+  .btn-secondary:hover { border-color: var(--border-hover); background: var(--border); }
+
+  .input {
+    @apply w-full px-3 py-2 rounded-lg text-sm transition-colors;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+  .input:focus { border-color: var(--accent-blue); outline: none; }
+  .input::placeholder { color: var(--text-muted); }
+
+  .select {
+    @apply input appearance-none cursor-pointer;
+  }
+
+  .label {
+    @apply block text-xs font-medium mb-1.5;
+    color: var(--text-secondary);
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .table-row-hover {
+    @apply transition-colors;
+  }
+  .table-row-hover:hover { background: var(--bg-hover); }
+
+  .stat-card {
+    @apply card flex items-start gap-4;
+  }
+
+  .icon-box {
+    @apply flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all;
+    color: var(--text-secondary);
+  }
+  .sidebar-link:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .sidebar-link.active { background: rgba(59, 130, 246, 0.12); color: var(--accent-blue); }
+}
+
+/* Priority colors */
+.priority-low { color: var(--accent-green); }
+.priority-medium { color: var(--accent-amber); }
+.priority-high { color: #f97316; }
+.priority-critical { color: var(--accent-red); }
+
+/* Status badges */
+.status-open { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.status-in_progress { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.status-waiting { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+.status-resolved { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.status-closed { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+.status-available { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.status-assigned { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.status-under_repair { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.status-retired { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+.status-lost { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.status-active { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.status-expired { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.status-cancelled { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+.status-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
