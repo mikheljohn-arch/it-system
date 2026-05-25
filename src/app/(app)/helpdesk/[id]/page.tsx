@@ -30,6 +30,19 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
     ? await supabase.from('profiles').select('id, full_name').in('role', ['it_staff', 'admin'])
     : { data: [] }
 
+  const details: [string, string][] = [
+    ['Category', ticket.category],
+    ['Priority', ticket.priority],
+    ['Status', ticket.status.replace('_', ' ')],
+    ['Assigned to', ticket.assignee?.full_name || 'Unassigned'],
+    ['Submitted by', ticket.submitter?.full_name || ''],
+    ['Department', ticket.submitter?.department || '—'],
+    ['Created', format(new Date(ticket.created_at), 'MMM d, yyyy')],
+  ]
+  if (ticket.resolved_at) {
+    details.push(['Resolved', format(new Date(ticket.resolved_at), 'MMM d, yyyy')])
+  }
+
   return (
     <div className="p-6 max-w-4xl animate-fade-in">
       <div className="flex items-center gap-3 mb-6">
@@ -47,9 +60,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
       </div>
 
       <div className="grid grid-cols-3 gap-5">
-        {/* Main content */}
         <div className="col-span-2 space-y-4">
-          {/* Description */}
           <div className="card">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold" style={{ background: 'var(--accent-blue)', color: 'white' }}>
@@ -65,7 +76,6 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             </p>
           </div>
 
-          {/* Comments */}
           {comments && comments.length > 0 && (
             <div className="space-y-3">
               {comments.map((comment: any) => (
@@ -88,25 +98,14 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             </div>
           )}
 
-          {/* Add comment */}
           <AddComment ticketId={ticket.id} isStaff={isStaff} />
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
           <div className="card space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Details</p>
-            {[
-              ['Category', ticket.category],
-              ['Priority', ticket.priority],
-              ['Status', ticket.status.replace('_', ' ')],
-              ['Assigned to', ticket.assignee?.full_name || 'Unassigned'],
-              ['Submitted by', ticket.submitter?.full_name],
-              ['Department', ticket.submitter?.department || '—'],
-              ['Created', format(new Date(ticket.created_at), 'MMM d, yyyy')],
-              ticket.resolved_at ? ['Resolved', format(new Date(ticket.resolved_at), 'MMM d, yyyy')] : null,
-            ].filter(Boolean).map(([label, value]) => (
-              <div key={label as string} className="flex justify-between items-start gap-2">
+            {details.map(([label, value]) => (
+              <div key={label} className="flex justify-between items-start gap-2">
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
                 <p className="text-xs font-medium text-right capitalize" style={{ color: 'var(--text-primary)' }}>{value}</p>
               </div>
@@ -121,3 +120,4 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
     </div>
   )
 }
+
