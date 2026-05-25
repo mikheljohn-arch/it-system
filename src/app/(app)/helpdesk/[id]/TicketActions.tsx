@@ -7,7 +7,7 @@ import TicketActions from './TicketActions'
 import AddComment from './AddComment'
 import DeleteTicket from './DeleteTicket'
 
-export default async function TicketDetailPage({ params }: { params: { id: string } }) {
+export default function TicketActions({ ticket, staffList }: { ticket: any; staffList: any[] | null }) {) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
