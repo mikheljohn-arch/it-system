@@ -32,8 +32,7 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse
 }
 
-export const runtime = 'edge'
-
+"export const runtime = 'edge'`n`nexport default function SubmitPage() {`n  return null`n}"
 export default function SubmitPage() {
   return null
 }
