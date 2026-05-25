@@ -41,21 +41,7 @@ export async function middleware(request: NextRequest) {
   }
 
   return supabaseResponse
-}
-
-export const config = {
-  // something in here
-
-  runtime: 'edge',
-  // or
-  unstable_runtimeJS: false,
-  // etc.
-}
-// NEW - Next.js 14 app router syntax
-export const runtime = 'edge'          // if you were setting runtime
-export const dynamic = 'force-dynamic' // if you were controlling dynamic behav
-export const revalidate = 0            // if you were setting revalidation// NEW
-export const runtime = 'edge'          // if you were setting runtime
-export const dynamic = 'force-dynamic' // if you were controlling dynamic behav
-export const con...                    // if you were setting revalidation
 export const runtime = 'edge'
+
+e$content = Get-Content src\app\Submit\page.tsx
+$content | Select-Object -First 44 | Set-Content src\app\Submit\page.tsx
