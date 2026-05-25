@@ -43,5 +43,4 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse
 export const runtime = 'edge'
 
-e$content = Get-Content src\app\Submit\page.tsx
-$content | Select-Object -First 44 | Set-Content src\app\Submit\page.tsx
+
