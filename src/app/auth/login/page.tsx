@@ -20,16 +20,22 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
+    const cleanEmail = email.trim().replace(/[^\x00-\x7F]/g, '')
+    const cleanPassword = password.trim().replace(/[^\x00-\x7F]/g, '')
+
     if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(),password.trim
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email: cleanEmail, 
+        password: cleanPassword 
+      })
       if (error) { setError(error.message); setLoading(false); return }
       router.push('/dashboard')
       router.refresh()
     } else {
       const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } }
+        email: cleanEmail,
+        password: cleanPassword,
+        options: { data: { full_name: fullName.trim() } }
       })
       if (error) { setError(error.message); setLoading(false); return }
       setError('')
@@ -41,14 +47,12 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-primary)' }}>
-      {/* Background grid */}
       <div className="fixed inset-0 opacity-[0.03]" style={{
         backgroundImage: 'linear-gradient(var(--accent-blue) 1px, transparent 1px), linear-gradient(90deg, var(--accent-blue) 1px, transparent 1px)',
         backgroundSize: '40px 40px'
       }} />
 
       <div className="w-full max-w-md relative animate-fade-in">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}>
             <Monitor size={28} style={{ color: 'var(--accent-blue)' }} />
@@ -57,7 +61,6 @@ export default function LoginPage() {
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Internal systems portal</p>
         </div>
 
-        {/* Card */}
         <div className="card">
           <h2 className="text-lg font-semibold mb-6" style={{ color: 'var(--text-primary)' }}>
             {mode === 'login' ? 'Sign in to your account' : 'Create an account'}
@@ -88,6 +91,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -103,6 +107,7 @@ export default function LoginPage() {
                   onChange={e => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  autoComplete="current-password"
                 />
               </div>
             </div>
