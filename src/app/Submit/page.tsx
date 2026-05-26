@@ -36,6 +36,15 @@ const ISSUES = {
   ],
 }
 
+function generateTicketNumber() {
+  const now = new Date()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  const yyyy = now.getFullYear()
+  const rand = String(Math.floor(100 + Math.random() * 900))
+  return `AOD-${mm}${dd}${yyyy}-${rand}`
+}
+
 export default function SubmitPage() {
   const [form, setForm] = useState({
     full_name: '', email: '', category: '', issue_type: '', description: '',
@@ -43,6 +52,7 @@ export default function SubmitPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [ticketNumber, setTicketNumber] = useState('')
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -59,17 +69,22 @@ export default function SubmitPage() {
     if (!validate()) return
     setLoading(true)
     const supabase = createClient()
-    const fullDescription = `Submitted by: ${form.full_name} (${form.email})\nCategory: ${form.category}\nIssue Type: ${form.issue_type}\n\n${form.description}`
+    const tNum = generateTicketNumber()
+    const fullDescription = `Ticket No: ${tNum}\nSubmitted by: ${form.full_name} (${form.email})\nCategory: ${form.category}\nIssue Type: ${form.issue_type}\n\n${form.description}`
     const { error } = await supabase.from('tickets').insert({
-      title: form.issue_type,
+      title: `[${tNum}] ${form.issue_type}`,
       description: fullDescription,
       category: form.category,
       priority: 'medium',
       status: 'open',
     })
     setLoading(false)
-    if (!error) setSubmitted(true)
-    else alert('Something went wrong. Please try again.')
+    if (!error) {
+      setTicketNumber(tNum)
+      setSubmitted(true)
+    } else {
+      alert('Something went wrong. Please try again.')
+    }
   }
 
   const field = (hasError: boolean): React.CSSProperties => ({
@@ -87,11 +102,16 @@ export default function SubmitPage() {
 
   if (submitted) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'center', padding: '2rem' }}>
+      <div style={{ textAlign: 'center', padding: '2rem', maxWidth: 480 }}>
         <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
         <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: '#111' }}>Ticket submitted!</h2>
-        <p style={{ color: '#6b7280', marginBottom: 24 }}>Your IT support request has been received. We'll get back to you shortly.</p>
-        <button onClick={() => { setSubmitted(false); setForm({ full_name: '', email: '', category: '', issue_type: '', description: '' }) }}
+        <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '10px', padding: '1rem', margin: '1rem 0' }}>
+          <p style={{ fontSize: 13, color: '#166534', marginBottom: 4 }}>Your ticket number</p>
+          <p style={{ fontSize: 22, fontWeight: 700, color: '#15803d', letterSpacing: 1 }}>{ticketNumber}</p>
+          <p style={{ fontSize: 12, color: '#166534', marginTop: 4 }}>Save this for reference when following up.</p>
+        </div>
+        <p style={{ color: '#6b7280', marginBottom: 24, fontSize: 14 }}>Our IT team will review your request and get back to you shortly.</p>
+        <button onClick={() => { setSubmitted(false); setTicketNumber(''); setForm({ full_name: '', email: '', category: '', issue_type: '', description: '' }) }}
           style={{ padding: '10px 24px', border: '1px solid #d1d5db', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '14px', color: '#111' }}>
           Submit another ticket
         </button>
