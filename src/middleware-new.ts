@@ -28,10 +28,10 @@ export async function middleware(request: NextRequest) {
 
   return supabaseResponse
 }
+const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
+  const isPublicPage = request.nextUrl.pathname.startsWith('/submit')
 
-export const runtime = 'edge'
-
-  if (!user && !isAuthPage) {
+  if (!user && !isAuthPage && !isPublicPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/submit'
     return NextResponse.redirect(url)
@@ -46,6 +46,4 @@ export const runtime = 'edge'
   return supabaseResponse
 }
 
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
-}
+export const runtime = 'edge'
