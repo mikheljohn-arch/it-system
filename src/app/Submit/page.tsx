@@ -36,9 +36,16 @@ const ISSUES = {
   ],
 }
 
+const PRIORITIES = [
+  { value: 'low', label: '🟢 Low — Minor issue, no urgency' },
+  { value: 'medium', label: '🟡 Medium — Affects work but has workaround' },
+  { value: 'high', label: '🟠 High — Significantly impacts productivity' },
+  { value: 'critical', label: '🔴 Critical — Complete work stoppage' },
+]
+
 export default function SubmitPage() {
   const [form, setForm] = useState({
-    full_name: '', email: '', category: '', issue_type: '', description: '',
+    full_name: '', email: '', category: '', issue_type: '', priority: '', description: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitted, setSubmitted] = useState(false)
@@ -50,6 +57,7 @@ export default function SubmitPage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Please enter a valid email.'
     if (!form.category) e.category = 'Please select a category.'
     if (!form.issue_type) e.issue_type = 'Please select an issue type.'
+    if (!form.priority) e.priority = 'Please select a priority level.'
     if (!form.description.trim()) e.description = 'Please describe the issue.'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -59,12 +67,12 @@ export default function SubmitPage() {
     if (!validate()) return
     setLoading(true)
     const supabase = createClient()
-    const fullDescription = `Submitted by: ${form.full_name} (${form.email})\nCategory: ${form.category}\nIssue Type: ${form.issue_type}\n\n${form.description}`
+    const fullDescription = `Submitted by: ${form.full_name} (${form.email})\nCategory: ${form.category}\nIssue Type: ${form.issue_type}\nPriority: ${form.priority}\n\n${form.description}`
     const { error } = await supabase.from('tickets').insert({
       title: form.issue_type,
       description: fullDescription,
       category: form.category,
-      priority: 'medium',
+      priority: form.priority,
       status: 'open',
     })
     setLoading(false)
@@ -91,7 +99,7 @@ export default function SubmitPage() {
         <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
         <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: '#111' }}>Ticket submitted!</h2>
         <p style={{ color: '#6b7280', marginBottom: 24 }}>Your IT support request has been received. We'll get back to you shortly.</p>
-        <button onClick={() => { setSubmitted(false); setForm({ full_name: '', email: '', category: '', issue_type: '', description: '' }) }}
+        <button onClick={() => { setSubmitted(false); setForm({ full_name: '', email: '', category: '', issue_type: '', priority: '', description: '' }) }}
           style={{ padding: '10px 24px', border: '1px solid #d1d5db', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '14px', color: '#111' }}>
           Submit another ticket
         </button>
@@ -150,6 +158,21 @@ export default function SubmitPage() {
             {errors.issue_type && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors.issue_type}</p>}
           </div>
         )}
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
+            Priority level <span style={{ color: '#e24b4a' }}>*</span>
+          </label>
+          <select value={form.priority}
+            onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
+            style={field(!!errors.priority)}>
+            <option value=''>Select priority level</option>
+            {PRIORITIES.map(p => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+          {errors.priority && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors.priority}</p>}
+        </div>
 
         <div style={{ marginBottom: 24 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
