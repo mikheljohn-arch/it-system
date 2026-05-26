@@ -3,9 +3,42 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+const ISSUES = {
+  software: [
+    'Cannot log in to system/application',
+    'Application crashing or freezing',
+    'Software installation request',
+    'Email not working (Outlook/Gmail)',
+    'Slow computer performance',
+    'VPN connection issues',
+    'Microsoft Office errors',
+    'Printer driver not working',
+    'Browser issues (cannot access website)',
+    'Password reset request',
+    'System update/upgrade request',
+    'Antivirus or security alert',
+    'Other software issue',
+  ],
+  hardware: [
+    'Computer not turning on',
+    'Monitor not displaying / blank screen',
+    'Keyboard or mouse not working',
+    'Printer not printing',
+    'Internet / network not connecting',
+    'USB port not working',
+    'Laptop battery not charging',
+    'Computer running hot / overheating',
+    'Hard drive or storage issue',
+    'Headset or speaker not working',
+    'Webcam not working',
+    'Request for new equipment',
+    'Other hardware issue',
+  ],
+}
+
 export default function SubmitPage() {
   const [form, setForm] = useState({
-    full_name: '', email: '', title: '', description: '',
+    full_name: '', email: '', category: '', issue_type: '', description: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitted, setSubmitted] = useState(false)
@@ -15,7 +48,8 @@ export default function SubmitPage() {
     const e: Record<string, string> = {}
     if (!form.full_name.trim()) e.full_name = 'Please enter your full name.'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Please enter a valid email.'
-    if (!form.title.trim()) e.title = 'Please enter an issue title.'
+    if (!form.category) e.category = 'Please select a category.'
+    if (!form.issue_type) e.issue_type = 'Please select an issue type.'
     if (!form.description.trim()) e.description = 'Please describe the issue.'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -25,11 +59,11 @@ export default function SubmitPage() {
     if (!validate()) return
     setLoading(true)
     const supabase = createClient()
-    const fullDescription = `Submitted by: ${form.full_name} (${form.email})\n\n${form.description}`
+    const fullDescription = `Submitted by: ${form.full_name} (${form.email})\nCategory: ${form.category}\nIssue Type: ${form.issue_type}\n\n${form.description}`
     const { error } = await supabase.from('tickets').insert({
-      title: form.title,
+      title: form.issue_type,
       description: fullDescription,
-      category: 'software',
+      category: form.category,
       priority: 'medium',
       status: 'open',
     })
@@ -57,7 +91,7 @@ export default function SubmitPage() {
         <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
         <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: '#111' }}>Ticket submitted!</h2>
         <p style={{ color: '#6b7280', marginBottom: 24 }}>Your IT support request has been received. We'll get back to you shortly.</p>
-        <button onClick={() => { setSubmitted(false); setForm({ full_name: '', email: '', title: '', description: '' }) }}
+        <button onClick={() => { setSubmitted(false); setForm({ full_name: '', email: '', category: '', issue_type: '', description: '' }) }}
           style={{ padding: '10px 24px', border: '1px solid #d1d5db', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '14px', color: '#111' }}>
           Submit another ticket
         </button>
@@ -74,7 +108,6 @@ export default function SubmitPage() {
         {([
           { id: 'full_name', label: 'Full name', type: 'text', placeholder: 'e.g. Juan dela Cruz' },
           { id: 'email', label: 'Email address', type: 'email', placeholder: 'you@company.com' },
-          { id: 'title', label: 'Issue title', type: 'text', placeholder: 'Brief summary of the problem' },
         ] as const).map(({ id, label, type, placeholder }) => (
           <div key={id} style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
@@ -87,11 +120,43 @@ export default function SubmitPage() {
           </div>
         ))}
 
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
+            Category <span style={{ color: '#e24b4a' }}>*</span>
+          </label>
+          <select value={form.category}
+            onChange={e => setForm(f => ({ ...f, category: e.target.value, issue_type: '' }))}
+            style={field(!!errors.category)}>
+            <option value=''>Select a category</option>
+            <option value='software'>💻 Software</option>
+            <option value='hardware'>🖨️ Hardware</option>
+          </select>
+          {errors.category && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors.category}</p>}
+        </div>
+
+        {form.category && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
+              Issue type <span style={{ color: '#e24b4a' }}>*</span>
+            </label>
+            <select value={form.issue_type}
+              onChange={e => setForm(f => ({ ...f, issue_type: e.target.value }))}
+              style={field(!!errors.issue_type)}>
+              <option value=''>Select an issue</option>
+              {ISSUES[form.category as keyof typeof ISSUES].map(issue => (
+                <option key={issue} value={issue}>{issue}</option>
+              ))}
+            </select>
+            {errors.issue_type && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors.issue_type}</p>}
+          </div>
+        )}
+
         <div style={{ marginBottom: 24 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
-            Issue description <span style={{ color: '#e24b4a' }}>*</span>
+            Additional details <span style={{ color: '#e24b4a' }}>*</span>
           </label>
-          <textarea placeholder='Describe the issue in detail...' value={form.description}
+          <textarea placeholder='Describe the issue in more detail — when it started, steps to reproduce, etc.'
+            value={form.description}
             onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4}
             style={{ ...field(!!errors.description), resize: 'vertical' }} />
           {errors.description && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors.description}</p>}
