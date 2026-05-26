@@ -1,132 +1,145 @@
-import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
-import { Plus, Search, Ticket } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+'use client'
 
-const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 }
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
-export default async function HelpdeskPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; priority?: string }
-}) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+const inputStyle = (hasError: boolean) => ({
+  width: '100%',
+  padding: '9px 12px',
+  border: `1px solid ${hasError ? 'red' : '#ddd'}`,
+  borderRadius: 8,
+  fontSize: 14,
+  outline: 'none',
+  boxSizing: 'border-box' as const,
+  color: '#0a0a0a',
+  background: '#ffffff',
+})
 
-  const isStaff = profile?.role === 'it_staff' || profile?.role === 'admin'
+export default function SubmitPage() {
+  const [form, setForm] = useState({
+    full_name: '', email: '', department: '', title: '', description: '', priority: '',
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  let query = supabase
-    .from('tickets')
-    .select('*, submitter:submitted_by(full_name, email), assignee:assigned_to(full_name)')
-    .order('created_at', { ascending: false })
+  const validate = () => {
+    const e: Record<string, string> = {}
+    if (!form.full_name.trim()) e.full_name = 'Please enter your full name.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Please enter a valid email.'
+    if (!form.department) e.department = 'Please select your department.'
+    if (!form.title.trim()) e.title = 'Please enter an issue title.'
+    if (!form.description.trim()) e.description = 'Please describe the issue.'
+    if (!form.priority) e.priority = 'Please select a priority.'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
 
-  if (searchParams.status) query = query.eq('status', searchParams.status)
-  if (searchParams.priority) query = query.eq('priority', searchParams.priority)
+  const handleSubmit = async () => {
+    if (!validate()) return
+    setLoading(true)
+    const supabase = createClient()
+    const { error } = await supabase.from('tickets').insert({
+      title: form.title,
+      description: form.description,
+      category: 'software',
+      priority: form.priority.toLowerCase(),
+      status: 'open',
+    })
+    setLoading(false)
+    if (!error) setSubmitted(true)
+    else alert('Something went wrong. Please try again.')
+  }
 
-  const { data: tickets } = await query
-
-  const statusTabs = [
-    { key: '', label: 'All' },
-    { key: 'open', label: 'Open' },
-    { key: 'in_progress', label: 'In Progress' },
-    { key: 'waiting', label: 'Waiting' },
-    { key: 'resolved', label: 'Resolved' },
-    { key: 'closed', label: 'Closed' },
+  const priorities = [
+    { label: 'Low', color: '#0F6E56', bg: '#E1F5EE', border: '#1D9E75' },
+    { label: 'Medium', color: '#854F0B', bg: '#FAEEDA', border: '#BA7517' },
+    { label: 'High', color: '#993C1D', bg: '#FAECE7', border: '#D85A30' },
+    { label: 'Critical', color: '#791F1F', bg: '#FCEBEB', border: '#A32D2D' },
   ]
 
+  if (submitted) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif', background: '#f9f9f9' }}>
+      <div style={{ textAlign: 'center', padding: '2rem' }}>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
+        <h2 style={{ fontSize: 22, fontWeight: 500, marginBottom: 8, color: '#111' }}>Ticket submitted!</h2>
+        <p style={{ color: '#666', marginBottom: 24 }}>Your IT support request has been received. We'll get back to you shortly.</p>
+        <button onClick={() => { setSubmitted(false); setForm({ full_name: '', email: '', department: '', title: '', description: '', priority: '' }) }}
+          style={{ padding: '10px 24px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, color: '#111' }}>
+          Submit another ticket
+        </button>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="p-6 space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>IT Helpdesk</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {isStaff ? 'Manage all support tickets' : 'Your submitted tickets'}
-          </p>
-        </div>
-        <Link href="/helpdesk/new" className="btn-primary">
-          <Plus size={16} />
-          New Ticket
-        </Link>
-      </div>
+    <div style={{ minHeight: '100vh', background: '#f9f9f9', fontFamily: 'sans-serif', padding: '2rem 1rem' }}>
+      <div style={{ maxWidth: 560, margin: '0 auto', background: '#fff', borderRadius: 12, border: '1px solid #eee', padding: '2rem' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 500, marginBottom: 6, color: '#111' }}>🖥️ IT Helpdesk</h1>
+        <p style={{ color: '#666', fontSize: 14, marginBottom: 24 }}>Submit a support request — no account needed.</p>
 
-      {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        {statusTabs.map(tab => (
-          <Link
-            key={tab.key}
-            href={`/helpdesk${tab.key ? `?status=${tab.key}` : ''}`}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={
-              (searchParams.status || '') === tab.key
-                ? { background: 'var(--accent-blue)', color: 'white' }
-                : { background: 'var(--bg-hover)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }
-            }
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </div>
-
-      {/* Ticket list */}
-      <div className="card p-0 overflow-hidden">
-        {!tickets || tickets.length === 0 ? (
-          <div className="text-center py-16">
-            <Ticket size={40} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
-            <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>No tickets found</p>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              {isStaff ? 'No tickets match your filter.' : 'Submit your first ticket to get IT support.'}
-            </p>
-            <Link href="/helpdesk/new" className="btn-primary inline-flex mt-4">
-              <Plus size={15} />
-              Submit a Ticket
-            </Link>
+        {[
+          { id: 'full_name', label: 'Full name', type: 'text', placeholder: 'e.g. Juan dela Cruz' },
+          { id: 'email', label: 'Email address', type: 'email', placeholder: 'you@company.com' },
+          { id: 'title', label: 'Issue title', type: 'text', placeholder: 'Brief summary of the problem' },
+        ].map(({ id, label, type, placeholder }) => (
+          <div key={id} style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 6 }}>
+              {label} <span style={{ color: 'red' }}>*</span>
+            </label>
+            <input type={type} placeholder={placeholder} value={(form as any)[id]}
+              onChange={e => setForm(f => ({ ...f, [id]: e.target.value }))}
+              style={inputStyle(!!errors[id])} />
+            {errors[id] && <p style={{ color: 'red', fontSize: 12, marginTop: 4 }}>{errors[id]}</p>}
           </div>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['#', 'Title', 'Category', 'Priority', 'Status', isStaff ? 'Submitted By' : 'Assigned To', 'Created'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {tickets.map((ticket: any) => (
-                <tr key={ticket.id} className="table-row-hover" style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>#{ticket.ticket_number}</td>
-                  <td className="px-4 py-3">
-                    <Link href={`/helpdesk/${ticket.id}`} className="text-sm font-medium hover:underline" style={{ color: 'var(--text-primary)' }}>
-                      {ticket.title}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="badge" style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
-                      {ticket.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-medium priority-${ticket.priority}`}>
-                      {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`badge status-${ticket.status}`}>
-                      {ticket.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {isStaff ? ticket.submitter?.full_name : ticket.assignee?.full_name || '—'}
-                  </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        ))}
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 6 }}>
+            Department <span style={{ color: 'red' }}>*</span>
+          </label>
+          <select value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
+            style={{ ...inputStyle(!!errors.department), background: '#fff' }}>
+            <option value=''>Select your department</option>
+            {['Administration', 'Finance', 'Human Resources', 'IT', 'Operations', 'Sales & Marketing', 'Other'].map(d => (
+              <option key={d}>{d}</option>
+            ))}
+          </select>
+          {errors.department && <p style={{ color: 'red', fontSize: 12, marginTop: 4 }}>{errors.department}</p>}
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 6 }}>
+            Issue description <span style={{ color: 'red' }}>*</span>
+          </label>
+          <textarea placeholder='Describe the issue in detail...' value={form.description}
+            onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4}
+            style={{ ...inputStyle(!!errors.description), resize: 'vertical' }} />
+          {errors.description && <p style={{ color: 'red', fontSize: 12, marginTop: 4 }}>{errors.description}</p>}
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 8 }}>
+            Priority <span style={{ color: 'red' }}>*</span>
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+            {priorities.map(({ label, color, bg, border }) => (
+              <button key={label} onClick={() => setForm(f => ({ ...f, priority: label }))}
+                style={{ padding: '10px 4px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                  border: `1px solid ${form.priority === label ? border : '#ddd'}`,
+                  background: form.priority === label ? bg : '#fff',
+                  color: form.priority === label ? color : '#555' }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {errors.priority && <p style={{ color: 'red', fontSize: 12, marginTop: 4 }}>{errors.priority}</p>}
+        </div>
+
+        <button onClick={handleSubmit} disabled={loading}
+          style={{ width: '100%', padding: 12, background: '#111', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
+          {loading ? 'Submitting…' : 'Submit ticket'}
+        </button>
       </div>
     </div>
   )

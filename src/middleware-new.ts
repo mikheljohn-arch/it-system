@@ -26,7 +26,10 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
   const isPublicPage = request.nextUrl.pathname.startsWith('/submit')
 
-  if (isPublicPage) return supabaseResponse
+  return supabaseResponse
+}
+
+export const runtime = 'edge'
 
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone()
