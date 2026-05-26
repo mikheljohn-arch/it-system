@@ -47,3 +47,5 @@ const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
 }
 
 export const runtime = 'edge'
+}
+ 
