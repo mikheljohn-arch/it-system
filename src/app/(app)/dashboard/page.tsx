@@ -106,4 +106,158 @@ export default async function DashboardPage() {
         {criticalTickets > 0 && (
           <div className="stat-card" style={{ borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)' }}>
             <div className="icon-box" style={{ background: 'rgba(239,68,68,0.12)' }}>
-              <AlertTriangle size={20} style={{ color: '
+              <AlertTriangle size={20} style={{ color: 'var(--accent-red)' }} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold" style={{ color: 'var(--accent-red)' }}>{criticalTickets}</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Critical Issues</p>
+            </div>
+          </div>
+        )}
+
+        {isStaff && (
+          <>
+            <div className="stat-card">
+              <div className="icon-box" style={{ background: 'rgba(16,185,129,0.12)' }}>
+                <Monitor size={20} style={{ color: 'var(--accent-green)' }} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{availableAssets}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Available Assets</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{assignedAssets} assigned</p>
+              </div>
+            </div>
+
+            <div className="stat-card" style={expiringLicenses > 0 ? { borderColor: 'rgba(245,158,11,0.3)' } : {}}>
+              <div className="icon-box" style={{ background: expiringLicenses > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(139,92,246,0.12)' }}>
+                <Key size={20} style={{ color: expiringLicenses > 0 ? 'var(--accent-amber)' : 'var(--accent-purple)' }} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold" style={{ color: expiringLicenses > 0 ? 'var(--accent-amber)' : 'var(--text-primary)' }}>{expiringLicenses}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Expiring (30d)</p>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="stat-card">
+          <div className="icon-box" style={{ background: 'rgba(16,185,129,0.12)' }}>
+            <CheckCircle size={20} style={{ color: 'var(--accent-green)' }} />
+          </div>
+          <div>
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              {tickets.filter((t: any) => t.status === 'resolved' || t.status === 'closed').length}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Resolved</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Ticket Queue — sorted by who requested first */}
+      {isStaff && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Clock size={16} style={{ color: 'var(--accent-blue)' }} />
+              <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Ticket Queue</h2>
+              <span className="badge" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent-blue)', fontSize: 11 }}>
+                {queue.length} pending
+              </span>
+            </div>
+            <Link href="/helpdesk" className="text-xs hover:underline" style={{ color: 'var(--accent-blue)' }}>View all →</Link>
+          </div>
+
+          {queue.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle size={32} className="mx-auto mb-2" style={{ color: 'var(--accent-green)' }} />
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>All caught up! No pending tickets.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    {['Queue', 'Tracking No.', 'Issue', 'Requested by', 'Submitted', 'Priority', 'Status'].map(h => (
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {queue.map((ticket: any, index: number) => (
+                    <tr key={ticket.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontWeight: 700, fontSize: 15 }}>
+                        #{index + 1}
+                      </td>
+                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                        <Link href={`/helpdesk/${ticket.id}`} style={{ color: 'var(--accent-blue)', fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>
+                          {getAODNumber(ticket)}
+                        </Link>
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-primary)', maxWidth: 200 }}>
+                        <p className="truncate">{ticket.title.replace(/^\[AOD-[^\]]+\]\s*/, '')}</p>
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                        {ticket.submitter?.full_name || '—'}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 12 }}>
+                        {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
+                      </td>
+                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 12 }}>{priorityLabel[ticket.priority]}</span>
+                      </td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span className={`badge status-${ticket.status}`} style={{ fontSize: 11 }}>
+                          {ticket.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recent Tickets */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Recent Tickets</h2>
+          <Link href="/helpdesk" className="text-xs hover:underline" style={{ color: 'var(--accent-blue)' }}>View all →</Link>
+        </div>
+
+        {recentTickets.length === 0 ? (
+          <div className="text-center py-8">
+            <Ticket size={32} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No tickets yet</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {recentTickets.map((ticket: any) => (
+              <Link key={ticket.id} href={`/helpdesk/${ticket.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-lg table-row-hover group">
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: statusColor[ticket.status] }} />
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted)' }}>{getAODNumber(ticket)}</span>{' '}
+                    {ticket.title.replace(/^\[AOD-[^\]]+\]\s*/, '')}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {ticket.submitter?.full_name || 'Unknown'} · {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="badge" style={{ background: 'var(--bg-hover)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {priorityLabel[ticket.priority]}
+                  </span>
+                  <span className={`badge status-${ticket.status}`} style={{ fontSize: '11px' }}>
+                    {ticket.status.replace('_', ' ')}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
