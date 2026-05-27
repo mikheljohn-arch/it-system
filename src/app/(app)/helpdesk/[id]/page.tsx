@@ -57,7 +57,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
               <div>
                 <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{ticket.submitter?.full_name}</p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  <LocalTime date={ticket.created_at} fmt="MMM d, yyyy h:mm a" />
+                  <LocalTime date={ticket.created_at} fmt="long" />
                 </p>
               </div>
             </div>
@@ -79,7 +79,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                     </div>
                     <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{comment.author_profile?.full_name}</p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      <LocalTime date={comment.created_at} fmt="MMM d, h:mm a" />
+                      <LocalTime date={comment.created_at} fmt="short" />
                     </p>
                   </div>
                   <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
@@ -115,14 +115,14 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             <div className="flex justify-between items-start gap-2">
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Created</p>
               <p className="text-xs font-medium text-right" style={{ color: 'var(--text-primary)' }}>
-                <LocalTime date={ticket.created_at} fmt="MMM d, yyyy" />
+                <LocalTime date={ticket.created_at} fmt="date-only" />
               </p>
             </div>
             {ticket.resolved_at && (
               <div className="flex justify-between items-start gap-2">
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Resolved</p>
                 <p className="text-xs font-medium text-right" style={{ color: 'var(--text-primary)' }}>
-                  <LocalTime date={ticket.resolved_at} fmt="MMM d, yyyy" />
+                  <LocalTime date={ticket.resolved_at} fmt="date-only" />
                 </p>
               </div>
             )}
