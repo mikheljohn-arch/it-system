@@ -111,8 +111,9 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in"><div className="p-6 space-y-6 animate-fade-in">
-  <AutoRefresh intervalSeconds={30} />
+    <div className="p-6 space-y-6 animate-fade-in">
+      <AutoRefresh intervalSeconds={30} />
+
       <div>
         <TimeGreeting name={profile?.full_name.split(' ')[0] || ''} />
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Here's what's happening across IT today.</p>
