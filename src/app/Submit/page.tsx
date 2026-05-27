@@ -53,6 +53,7 @@ export default function SubmitPage() {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [ticketNumber, setTicketNumber] = useState('')
+  const [submitError, setSubmitError] = useState('')
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -68,6 +69,7 @@ export default function SubmitPage() {
   const handleSubmit = async () => {
     if (!validate()) return
     setLoading(true)
+    setSubmitError('')
     const supabase = createClient()
     const tNum = generateTicketNumber()
     const fullDescription = `Ticket No: ${tNum}\nSubmitted by: ${form.full_name} (${form.email})\nCategory: ${form.category}\nIssue Type: ${form.issue_type}\n\n${form.description}`
@@ -83,7 +85,7 @@ export default function SubmitPage() {
       setTicketNumber(tNum)
       setSubmitted(true)
     } else {
-      alert('Something went wrong. Please try again.')
+      setSubmitError(`Error ${error.code}: ${error.message}`)
     }
   }
 
@@ -181,6 +183,12 @@ export default function SubmitPage() {
             style={{ ...field(!!errors.description), resize: 'vertical' }} />
           {errors.description && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors.description}</p>}
         </div>
+
+        {submitError && (
+          <div style={{ marginBottom: 16, padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: 13, color: '#991b1b' }}>
+            {submitError}
+          </div>
+        )}
 
         <button onClick={handleSubmit} disabled={loading}
           style={{ width: '100%', padding: '12px', background: '#111111', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
