@@ -15,4 +15,3 @@ export default function AutoRefresh({ intervalSeconds = 30 }: { intervalSeconds?
 
   return null
 }
-}
