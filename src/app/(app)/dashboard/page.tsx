@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Ticket, Monitor, Key, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
+import RelativeTime from './RelativeTime
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -64,8 +65,8 @@ export default async function DashboardPage() {
 
   function getAODNumber(ticket: any) {
     // Try to extract from title first (e.g. "[AOD-05262026-228] Issue title")
-    const match = ticket.title?.match(/\[AOD-(\d{8}-\d{3})\]/)
-    if (match) return `AOD-${match[1]}`
+    const match = ticket.title?.match(/\[?(AOD-\d{8}-\d+)\]?/)
+    if (match) return match[1]}`
     // Fallback: generate from created_at + ticket_number
     const d = new Date(ticket.created_at)
     const mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -103,10 +104,9 @@ export default async function DashboardPage() {
                   </p>
                 </td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                  {ticket.submitter?.full_name || '—'}
-                </td>
+                  {ticket.submitter?.full_name || 'Unknown'} · <RelativeTime date={ticket.created_at} />
                 <td style={{ padding: '10px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 12 }}>
-                  {formatDistanceToNow(new Date(showQueue ? ticket.created_at : (ticket.updated_at || ticket.created_at)), { addSuffix: true })}
+                  <RelativeTime date={showQueue ? ticket.created_at : (ticket.updated_at || ticket.created_at)} />
                 </td>
                 <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                   <span style={{ fontSize: 12 }}>{priorityLabel[ticket.priority]}</span>
@@ -135,6 +135,12 @@ export default async function DashboardPage() {
           Here's what's happening across IT today.
         </p>
       </div>
+
+      <h1 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {profile?.full_name.split(' ')[0]} 👋
+        </h1>
+
+        <TimeGreeting name={profile?.full_name.split(' ')[0] || ''} />
 
       {!isStaff && (
         <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
