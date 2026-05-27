@@ -8,10 +8,11 @@ export default function RelativeTime({ date }: { date: string }) {
 
   useEffect(() => {
     function update() {
-      setText(formatDistanceToNow(new Date(date), { addSuffix: true }))
+      const d = new Date(date)
+      setText(formatDistanceToNow(d, { addSuffix: true }))
     }
     update()
-    const interval = setInterval(update, 30000)
+    const interval = setInterval(update, 10000)
     return () => clearInterval(interval)
   }, [date])
 
