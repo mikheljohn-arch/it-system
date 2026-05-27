@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { format } from 'date-fns'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import TicketActions from './TicketActions'
 import AddComment from './AddComment'
 import DeleteTicket from './DeleteTicket'
+import LocalTime from './LocalTime'
 
 export default async function TicketDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -48,9 +48,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
       </div>
 
       <div className="grid grid-cols-3 gap-5">
-        {/* Main content */}
         <div className="col-span-2 space-y-4">
-          {/* Description */}
           <div className="card">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold" style={{ background: 'var(--accent-blue)', color: 'white' }}>
@@ -58,7 +56,9 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
               </div>
               <div>
                 <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{ticket.submitter?.full_name}</p>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{format(new Date(ticket.created_at), 'MMM d, yyyy h:mm a')}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <LocalTime date={ticket.created_at} fmt="MMM d, yyyy h:mm a" />
+                </p>
               </div>
             </div>
             <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
@@ -66,7 +66,6 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             </p>
           </div>
 
-          {/* Comments */}
           {comments && comments.length > 0 && (
             <div className="space-y-3">
               {comments.map((comment: any) => (
@@ -79,7 +78,9 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                       {comment.author_profile?.full_name?.charAt(0) || '?'}
                     </div>
                     <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{comment.author_profile?.full_name}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{format(new Date(comment.created_at), 'MMM d, h:mm a')}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <LocalTime date={comment.created_at} fmt="MMM d, h:mm a" />
+                    </p>
                   </div>
                   <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
                     {comment.content}
@@ -89,11 +90,9 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             </div>
           )}
 
-          {/* Add comment */}
           <AddComment ticketId={ticket.id} isStaff={isStaff} />
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
           <div className="card space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Details</p>
@@ -104,22 +103,33 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
               ['Assigned to', ticket.assignee?.full_name || 'Unassigned'],
               ['Submitted by', ticket.submitter?.full_name],
               ['Department', ticket.submitter?.department || '—'],
-              ['Created', format(new Date(ticket.created_at), 'MMM d, yyyy')],
-              ticket.resolved_at ? ['Resolved', format(new Date(ticket.resolved_at), 'MMM d, yyyy')] : null,
-            ].filter(Boolean).map((item) => { const [label, value] = item as [string, string]; return (
-              <div key={label as string} className="flex justify-between items-start gap-2">
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
-                <p className="text-xs font-medium text-right capitalize" style={{ color: 'var(--text-primary)' }}>{value}</p>
+            ].filter(Boolean).map((item) => {
+              const [label, value] = item as [string, string]
+              return (
+                <div key={label} className="flex justify-between items-start gap-2">
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                  <p className="text-xs font-medium text-right capitalize" style={{ color: 'var(--text-primary)' }}>{value}</p>
+                </div>
+              )
+            })}
+            <div className="flex justify-between items-start gap-2">
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Created</p>
+              <p className="text-xs font-medium text-right" style={{ color: 'var(--text-primary)' }}>
+                <LocalTime date={ticket.created_at} fmt="MMM d, yyyy" />
+              </p>
+            </div>
+            {ticket.resolved_at && (
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Resolved</p>
+                <p className="text-xs font-medium text-right" style={{ color: 'var(--text-primary)' }}>
+                  <LocalTime date={ticket.resolved_at} fmt="MMM d, yyyy" />
+                </p>
               </div>
-            )})}
+            )}
           </div>
 
-          {isStaff && (
-            <TicketActions ticket={ticket} staffList={staffList || []} />
-          )}
-          {isStaff && (
-            <DeleteTicket ticketId={ticket.id} />
-          )}
+          {isStaff && <TicketActions ticket={ticket} staffList={staffList || []} />}
+          {isStaff && <DeleteTicket ticketId={ticket.id} />}
         </div>
       </div>
     </div>
