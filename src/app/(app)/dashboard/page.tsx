@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import TimeGreeting from './TimeGreeting'
 import RelativeTime from './RelativeTime'
+import AutoRefresh from './AutoRefresh'
 
 export default async function DashboardPage() {
   const supabase = createClient()
