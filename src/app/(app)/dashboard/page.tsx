@@ -10,7 +10,7 @@ export default async function DashboardPage() {
 
   const isStaff = profile?.role === 'it_staff' || profile?.role === 'admin'
 
-  const [ticketsRes, assetsRes, licensesRes, recentTicketsRes, queueRes] = await Promise.all([
+  const [ticketsRes, assetsRes, licensesRes, recentTicketsRes, queueRes, doneRes] = await Promise.all([
     supabase.from('tickets').select('status, priority', { count: 'exact' }),
     isStaff ? supabase.from('assets').select('status', { count: 'exact' }) : Promise.resolve({ data: [], count: 0, error: null }),
     isStaff ? supabase.from('software_licenses').select('status, renewal_date', { count: 'exact' }) : Promise.resolve({ data: [], count: 0, error: null }),
@@ -22,6 +22,11 @@ export default async function DashboardPage() {
       .select('*, submitter:submitted_by(full_name)')
       .in('status', ['open', 'in_progress'])
       .order('created_at', { ascending: true }),
+    supabase.from('tickets')
+      .select('*, submitter:submitted_by(full_name)')
+      .in('status', ['resolved', 'closed'])
+      .order('updated_at', { ascending: false })
+      .limit(10),
   ])
 
   const tickets = ticketsRes.data || []
@@ -29,10 +34,11 @@ export default async function DashboardPage() {
   const licenses = licensesRes.data || []
   const recentTickets = recentTicketsRes.data || []
   const queue = queueRes.data || []
+  const done = doneRes.data || []
 
-  const openTickets = tickets.filter(t => t.status === 'open').length
-  const inProgressTickets = tickets.filter(t => t.status === 'in_progress').length
-  const criticalTickets = tickets.filter(t => t.priority === 'critical' && t.status !== 'closed').length
+  const openTickets = tickets.filter((t: any) => t.status === 'open').length
+  const inProgressTickets = tickets.filter((t: any) => t.status === 'in_progress').length
+  const criticalTickets = tickets.filter((t: any) => t.priority === 'critical' && t.status !== 'closed').length
   const availableAssets = assets.filter((a: any) => a.status === 'available').length
   const assignedAssets = assets.filter((a: any) => a.status === 'assigned').length
   const expiringLicenses = licenses.filter((l: any) => {
@@ -57,12 +63,65 @@ export default async function DashboardPage() {
   }
 
   function getAODNumber(ticket: any) {
+    // Try to extract from title first (e.g. "[AOD-05262026-228] Issue title")
+    const match = ticket.title?.match(/\[AOD-(\d{8}-\d{3})\]/)
+    if (match) return `AOD-${match[1]}`
+    // Fallback: generate from created_at + ticket_number
     const d = new Date(ticket.created_at)
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const dd = String(d.getDate()).padStart(2, '0')
     const yyyy = d.getFullYear()
     const seq = String(ticket.ticket_number).padStart(3, '0')
     return `AOD-${mm}${dd}${yyyy}-${seq}`
+  }
+
+  function QueueTable({ rows, showQueue }: { rows: any[], showQueue: boolean }) {
+    return (
+      <div className="overflow-x-auto">
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              {[showQueue ? 'Queue' : 'Order', 'Tracking No.', 'Issue', 'Requested by', showQueue ? 'Submitted' : 'Resolved', 'Priority', 'Status'].map(h => (
+                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((ticket: any, index: number) => (
+              <tr key={ticket.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontWeight: 700, fontSize: 15 }}>
+                  #{index + 1}
+                </td>
+                <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                  <Link href={`/helpdesk/${ticket.id}`} style={{ color: 'var(--accent-blue)', fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>
+                    {getAODNumber(ticket)}
+                  </Link>
+                </td>
+                <td style={{ padding: '10px 12px', color: 'var(--text-primary)', maxWidth: 200 }}>
+                  <p style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {ticket.title.replace(/^\[AOD-[^\]]+\]\s*/, '')}
+                  </p>
+                </td>
+                <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                  {ticket.submitter?.full_name || '—'}
+                </td>
+                <td style={{ padding: '10px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 12 }}>
+                  {formatDistanceToNow(new Date(showQueue ? ticket.created_at : (ticket.updated_at || ticket.created_at)), { addSuffix: true })}
+                </td>
+                <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 12 }}>{priorityLabel[ticket.priority]}</span>
+                </td>
+                <td style={{ padding: '10px 12px' }}>
+                  <span className={`badge status-${ticket.status}`} style={{ fontSize: 11 }}>
+                    {ticket.status.replace('_', ' ')}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
   }
 
   return (
@@ -153,69 +212,51 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Ticket Queue — sorted by who requested first */}
       {isStaff && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Clock size={16} style={{ color: 'var(--accent-blue)' }} />
-              <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Ticket Queue</h2>
-              <span className="badge" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent-blue)', fontSize: 11 }}>
-                {queue.length} pending
-              </span>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Pending Queue */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Clock size={16} style={{ color: 'var(--accent-blue)' }} />
+                <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Pending Queue</h2>
+                <span className="badge" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent-blue)', fontSize: 11 }}>
+                  {queue.length} pending
+                </span>
+              </div>
+              <Link href="/helpdesk" className="text-xs hover:underline" style={{ color: 'var(--accent-blue)' }}>View all →</Link>
             </div>
-            <Link href="/helpdesk" className="text-xs hover:underline" style={{ color: 'var(--accent-blue)' }}>View all →</Link>
+            {queue.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle size={32} className="mx-auto mb-2" style={{ color: 'var(--accent-green)' }} />
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>All caught up! No pending tickets.</p>
+              </div>
+            ) : (
+              <QueueTable rows={queue} showQueue={true} />
+            )}
           </div>
 
-          {queue.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle size={32} className="mx-auto mb-2" style={{ color: 'var(--accent-green)' }} />
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>All caught up! No pending tickets.</p>
+          {/* Done */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle size={16} style={{ color: 'var(--accent-green)' }} />
+                <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Completed</h2>
+                <span className="badge" style={{ background: 'rgba(16,185,129,0.1)', color: 'var(--accent-green)', fontSize: 11 }}>
+                  {done.length} resolved
+                </span>
+              </div>
+              <Link href="/helpdesk" className="text-xs hover:underline" style={{ color: 'var(--accent-blue)' }}>View all →</Link>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Queue', 'Tracking No.', 'Issue', 'Requested by', 'Submitted', 'Priority', 'Status'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {queue.map((ticket: any, index: number) => (
-                    <tr key={ticket.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontWeight: 700, fontSize: 15 }}>
-                        #{index + 1}
-                      </td>
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                        <Link href={`/helpdesk/${ticket.id}`} style={{ color: 'var(--accent-blue)', fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>
-                          {getAODNumber(ticket)}
-                        </Link>
-                      </td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-primary)', maxWidth: 200 }}>
-                        <p className="truncate">{ticket.title.replace(/^\[AOD-[^\]]+\]\s*/, '')}</p>
-                      </td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                        {ticket.submitter?.full_name || '—'}
-                      </td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 12 }}>
-                        {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
-                      </td>
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontSize: 12 }}>{priorityLabel[ticket.priority]}</span>
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span className={`badge status-${ticket.status}`} style={{ fontSize: 11 }}>
-                          {ticket.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+            {done.length === 0 ? (
+              <div className="text-center py-8">
+                <Ticket size={32} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No completed tickets yet.</p>
+              </div>
+            ) : (
+              <QueueTable rows={done} showQueue={false} />
+            )}
+          </div>
         </div>
       )}
 
@@ -225,7 +266,6 @@ export default async function DashboardPage() {
           <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Recent Tickets</h2>
           <Link href="/helpdesk" className="text-xs hover:underline" style={{ color: 'var(--accent-blue)' }}>View all →</Link>
         </div>
-
         {recentTickets.length === 0 ? (
           <div className="text-center py-8">
             <Ticket size={32} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
