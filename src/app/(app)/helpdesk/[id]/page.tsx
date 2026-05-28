@@ -1,199 +1,136 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
+import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import TicketActions from './TicketActions'
+import AddComment from './AddComment'
+import DeleteTicket from './DeleteTicket'
+import LocalTime from './LocalTime'
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+export default async function TicketDetailPage({ params }: { params: { id: string } }) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+  const isStaff = profile?.role === 'it_staff' || profile?.role === 'admin'
 
-const ISSUES = {
-  software: [
-    'Cannot log in to system/application',
-    'Application crashing or freezing',
-    'Software installation request',
-    'Email not working (Outlook/Gmail)',
-    'Slow computer performance',
-    'VPN connection issues',
-    'Microsoft Office errors',
-    'Printer driver not working',
-    'Browser issues (cannot access website)',
-    'Password reset request',
-    'System update/upgrade request',
-    'Antivirus or security alert',
-    'Other software issue',
-  ],
-  hardware: [
-    'Computer not turning on',
-    'Monitor not displaying / blank screen',
-    'Keyboard or mouse not working',
-    'Printer not printing',
-    'Internet / network not connecting',
-    'USB port not working',
-    'Laptop battery not charging',
-    'Computer running hot / overheating',
-    'Hard drive or storage issue',
-    'Headset or speaker not working',
-    'Webcam not working',
-    'Request for new equipment',
-    'Other hardware issue',
-  ],
-}
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('*, submitter:submitted_by(*), assignee:assigned_to(*)')
+    .eq('id', params.id)
+    .single()
 
-function generateTicketNumber() {
-  const now = new Date()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  const yyyy = now.getFullYear()
-  const rand = String(Math.floor(100 + Math.random() * 900))
-  return `AOD-${mm}${dd}${yyyy}-${rand}`
-}
+  if (!ticket) notFound()
 
-export default function SubmitPage() {
-  const [form, setForm] = useState({
-    full_name: '', email: '', category: '', issue_type: '', description: '',
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [submitted, setSubmitted] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [ticketNumber, setTicketNumber] = useState('')
-  const [submitError, setSubmitError] = useState('')
+  const { data: comments } = await supabase
+    .from('ticket_comments')
+    .select('*, author_profile:author(*)')
+    .eq('ticket_id', params.id)
+    .order('created_at', { ascending: true })
 
-  const validate = () => {
-    const e: Record<string, string> = {}
-    if (!form.full_name.trim()) e.full_name = 'Please enter your full name.'
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Please enter a valid email.'
-    if (!form.category) e.category = 'Please select a category.'
-    if (!form.issue_type) e.issue_type = 'Please select an issue type.'
-    if (!form.description.trim()) e.description = 'Please describe the issue.'
-    setErrors(e)
-    return Object.keys(e).length === 0
-  }
-
-  const handleSubmit = async () => {
-    if (!validate()) return
-    setLoading(true)
-    setSubmitError('')
-    const supabase = createClient()
-    const tNum = generateTicketNumber()
-    const fullDescription = `Ticket No: ${tNum}\nSubmitted by: ${form.full_name} (${form.email})\nCategory: ${form.category}\nIssue Type: ${form.issue_type}\n\n${form.description}`
-    const { error } = await supabase.from('tickets').insert({
-      title: `[${tNum}] ${form.issue_type}`,
-      description: fullDescription,
-      category: form.category,
-      priority: 'medium',
-      status: 'open',
-    })
-    setLoading(false)
-    if (!error) {
-      setTicketNumber(tNum)
-      setSubmitted(true)
-    } else {
-      setSubmitError(`Error ${error.code}: ${error.message}`)
-    }
-  }
-
-  const field = (hasError: boolean): React.CSSProperties => ({
-    width: '100%',
-    padding: '9px 12px',
-    border: `1px solid ${hasError ? '#e24b4a' : '#d1d5db'}`,
-    borderRadius: '8px',
-    fontSize: '14px',
-    outline: 'none',
-    boxSizing: 'border-box',
-    color: '#111111',
-    background: '#ffffff',
-    fontFamily: 'sans-serif',
-  })
-
-  if (submitted) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'center', padding: '2rem', maxWidth: 480 }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-        <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: '#111' }}>Ticket submitted!</h2>
-        <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '10px', padding: '1rem', margin: '1rem 0' }}>
-          <p style={{ fontSize: 13, color: '#166534', marginBottom: 4 }}>Your ticket number</p>
-          <p style={{ fontSize: 22, fontWeight: 700, color: '#15803d', letterSpacing: 1 }}>{ticketNumber}</p>
-          <p style={{ fontSize: 12, color: '#166534', marginTop: 4 }}>Save this for reference when following up.</p>
-        </div>
-        <p style={{ color: '#6b7280', marginBottom: 24, fontSize: 14 }}>Our IT team will review your request and get back to you shortly.</p>
-        <button onClick={() => { setSubmitted(false); setTicketNumber(''); setForm({ full_name: '', email: '', category: '', issue_type: '', description: '' }) }}
-          style={{ padding: '10px 24px', border: '1px solid #d1d5db', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '14px', color: '#111' }}>
-          Submit another ticket
-        </button>
-      </div>
-    </div>
-  )
+  const { data: staffList } = isStaff
+    ? await supabase.from('profiles').select('id, full_name').in('role', ['it_staff', 'admin'])
+    : { data: [] }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6', fontFamily: 'sans-serif', padding: '2rem 1rem' }}>
-      <div style={{ maxWidth: 560, margin: '0 auto', background: '#ffffff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '2rem' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 6, color: '#111111' }}>🖥️ IT Helpdesk</h1>
-        <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 24 }}>Submit a support request — no account needed.</p>
-
-        {([
-          { id: 'full_name', label: 'Full name', type: 'text', placeholder: 'e.g. Juan dela Cruz' },
-          { id: 'email', label: 'Email address', type: 'email', placeholder: 'you@company.com' },
-        ] as const).map(({ id, label, type, placeholder }) => (
-          <div key={id} style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
-              {label} <span style={{ color: '#e24b4a' }}>*</span>
-            </label>
-            <input type={type} placeholder={placeholder} value={form[id]}
-              onChange={e => setForm(f => ({ ...f, [id]: e.target.value }))}
-              style={field(!!errors[id])} />
-            {errors[id] && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors[id]}</p>}
+    <div className="p-6 max-w-4xl animate-fade-in">
+      <div className="flex items-center gap-3 mb-6">
+        <Link href="/helpdesk" className="btn-secondary p-2">
+          <ArrowLeft size={16} />
+        </Link>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>#{ticket.ticket_number}</span>
+            <span className={`badge status-${ticket.status}`}>{ticket.status.replace('_', ' ')}</span>
+            <span className={`text-xs font-medium priority-${ticket.priority}`}>{ticket.priority}</span>
           </div>
-        ))}
-
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
-            Category <span style={{ color: '#e24b4a' }}>*</span>
-          </label>
-          <select value={form.category}
-            onChange={e => setForm(f => ({ ...f, category: e.target.value, issue_type: '' }))}
-            style={field(!!errors.category)}>
-            <option value=''>Select a category</option>
-            <option value='software'>💻 Software</option>
-            <option value='hardware'>🖨️ Hardware</option>
-          </select>
-          {errors.category && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors.category}</p>}
+          <h1 className="text-xl font-semibold mt-1" style={{ color: 'var(--text-primary)' }}>{ticket.title}</h1>
         </div>
+      </div>
 
-        {form.category && (
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
-              Issue type <span style={{ color: '#e24b4a' }}>*</span>
-            </label>
-            <select value={form.issue_type}
-              onChange={e => setForm(f => ({ ...f, issue_type: e.target.value }))}
-              style={field(!!errors.issue_type)}>
-              <option value=''>Select an issue</option>
-              {ISSUES[form.category as keyof typeof ISSUES].map(issue => (
-                <option key={issue} value={issue}>{issue}</option>
+      <div className="grid grid-cols-3 gap-5">
+        <div className="col-span-2 space-y-4">
+          <div className="card">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold" style={{ background: 'var(--accent-blue)', color: 'white' }}>
+                {ticket.submitter?.full_name?.charAt(0) || '?'}
+              </div>
+              <div>
+                <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{ticket.submitter?.full_name}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <LocalTime date={ticket.created_at} fmt="long" />
+                </p>
+              </div>
+            </div>
+            <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              {ticket.description}
+            </p>
+          </div>
+
+          {comments && comments.length > 0 && (
+            <div className="space-y-3">
+              {comments.map((comment: any) => (
+                <div key={comment.id} className="card" style={comment.is_internal ? { borderColor: 'rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.04)' } : {}}>
+                  {comment.is_internal && (
+                    <p className="text-xs mb-2 font-medium" style={{ color: 'var(--accent-amber)' }}>🔒 Internal note</p>
+                  )}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold" style={{ background: 'rgba(59,130,246,0.2)', color: 'var(--accent-blue)' }}>
+                      {comment.author_profile?.full_name?.charAt(0) || '?'}
+                    </div>
+                    <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{comment.author_profile?.full_name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <LocalTime date={comment.created_at} fmt="short" />
+                    </p>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                    {comment.content}
+                  </p>
+                </div>
               ))}
-            </select>
-            {errors.issue_type && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors.issue_type}</p>}
-          </div>
-        )}
+            </div>
+          )}
 
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
-            Additional details <span style={{ color: '#e24b4a' }}>*</span>
-          </label>
-          <textarea placeholder='Describe the issue in more detail — when it started, steps to reproduce, etc.'
-            value={form.description}
-            onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4}
-            style={{ ...field(!!errors.description), resize: 'vertical' }} />
-          {errors.description && <p style={{ color: '#e24b4a', fontSize: 12, marginTop: 4 }}>{errors.description}</p>}
+          <AddComment ticketId={ticket.id} isStaff={isStaff} />
         </div>
 
-        {submitError && (
-          <div style={{ marginBottom: 16, padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: 13, color: '#991b1b' }}>
-            {submitError}
+        <div className="space-y-4">
+          <div className="card space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Details</p>
+            {[
+              ['Category', ticket.category],
+              ['Priority', ticket.priority],
+              ['Status', ticket.status.replace('_', ' ')],
+              ['Assigned to', ticket.assignee?.full_name || 'Unassigned'],
+              ['Submitted by', ticket.submitter?.full_name],
+              ['Department', ticket.submitter?.department || '—'],
+            ].filter(Boolean).map((item) => {
+              const [label, value] = item as [string, string]
+              return (
+                <div key={label} className="flex justify-between items-start gap-2">
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                  <p className="text-xs font-medium text-right capitalize" style={{ color: 'var(--text-primary)' }}>{value}</p>
+                </div>
+              )
+            })}
+            <div className="flex justify-between items-start gap-2">
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Created</p>
+              <p className="text-xs font-medium text-right" style={{ color: 'var(--text-primary)' }}>
+                <LocalTime date={ticket.created_at} fmt="date-only" />
+              </p>
+            </div>
+            {ticket.resolved_at && (
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Resolved</p>
+                <p className="text-xs font-medium text-right" style={{ color: 'var(--text-primary)' }}>
+                  <LocalTime date={ticket.resolved_at} fmt="date-only" />
+                </p>
+              </div>
+            )}
           </div>
-        )}
 
-        <button onClick={handleSubmit} disabled={loading}
-          style={{ width: '100%', padding: '12px', background: '#111111', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
-          {loading ? 'Submitting…' : 'Submit ticket'}
-        </button>
+          {isStaff && <TicketActions ticket={ticket} staffList={staffList || []} />}
+          {isStaff && <DeleteTicket ticketId={ticket.id} />}
+        </div>
       </div>
     </div>
   )
