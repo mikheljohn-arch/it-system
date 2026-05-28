@@ -89,7 +89,7 @@ export default async function DashboardPage() {
                   {ticket.title.replace(/^\[AOD-[^\]]+\]\s*/, '')}
                 </td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-  {ticket.submitter?.full_name || ticket.description?.match(/Submitted by: ([^\n(]+)/)?.[1]?.trim() || '—'}
+  {ticket\.submitter\?\.full_name \|\| ''—''}', '{ticket.submitter?.full_name || ticket.description?.match(/Submitted by: ([^\n(]+)/)?.[1]?.trim() || ''—''}
 </td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 12 }}>
                   <RelativeTime date={showQueue ? ticket.created_at : (ticket.updated_at || ticket.created_at)} />
