@@ -65,6 +65,12 @@ export default async function DashboardPage() {
     return `AOD-${mm}${dd}${yyyy}-${seq}`
   }
 
+  function getRequesterName(ticket: any) {
+    if (ticket.submitter?.full_name) return ticket.submitter.full_name
+    const match = ticket.description?.match(/Submitted by: ([^\n(]+)/)
+    return match ? match[1].trim() : '—'
+  }
+
   function TicketTable({ rows, showQueue }: { rows: any[], showQueue: boolean }) {
     return (
       <div style={{ overflowX: 'auto' }}>
@@ -89,8 +95,8 @@ export default async function DashboardPage() {
                   {ticket.title.replace(/^\[AOD-[^\]]+\]\s*/, '')}
                 </td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-  {ticket\.submitter\?\.full_name \|\| ''—''}', '{ticket.submitter?.full_name || ticket.description?.match(/Submitted by: ([^\n(]+)/)?.[1]?.trim() || ''—''}
-</td>
+                  {getRequesterName(ticket)}
+                </td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 12 }}>
                   <RelativeTime date={showQueue ? ticket.created_at : (ticket.updated_at || ticket.created_at)} />
                 </td>
@@ -251,7 +257,7 @@ export default async function DashboardPage() {
                     {ticket.title.replace(/^\[AOD-[^\]]+\]\s*/, '')}
                   </p>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {ticket.submitter?.full_name || 'Unknown'} · <RelativeTime date={ticket.created_at} />
+                    {getRequesterName(ticket)} · <RelativeTime date={ticket.created_at} />
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
