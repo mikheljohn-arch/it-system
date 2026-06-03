@@ -2,33 +2,27 @@ import { NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createClient } from '@/lib/supabase/server'
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
-
 export async function POST(req: Request) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  )
+
+  const { title, body } = await req.json()
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { title, body, userId } = await req.json()
-
-  // Fetch the target user's push subscription
-  const { data: sub } = await supabase
+  const { data: subs } = await supabase
     .from('push_subscriptions')
     .select('subscription')
-    .eq('user_id', userId)
-    .single()
 
-  if (!sub) return NextResponse.json({ error: 'No subscription found' }, { status: 404 })
+  if (!subs) return NextResponse.json({ success: false })
 
-  // Send the push notification
-  await webpush.sendNotification(
-    sub.subscription,
-    JSON.stringify({ title, body })
+  await Promise.all(
+    subs.map(({ subscription }) =>
+      webpush.sendNotification(subscription, JSON.stringify({ title, body, url: '/dashboard' }))
+        .catch(() => {})
+    )
   )
 
   return NextResponse.json({ success: true })
