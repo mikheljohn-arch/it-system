@@ -82,18 +82,20 @@ export default function SubmitPage() {
     })
     setLoading(false)
     if (!error) {
-  setTicketNumber(tNum)
-  setSubmitted(true)
-  // Fire and forget - don't await
-  fetch('/api/push/notify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: '🖥️ New IT Support Request',
-      body: `${form.full_name} submitted: ${form.issue_type}`,
-    }),
-  }).catch(() => {})
-}
+      setTicketNumber(tNum)
+      setSubmitted(true)
+      fetch('/api/push/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'New IT Support Request',
+          body: `${form.full_name} submitted: ${form.issue_type}`,
+        }),
+      }).catch(() => {})
+    } else {
+      setSubmitError(`Error ${error.code}: ${error.message}`)
+    }
+  }
 
   const field = (hasError: boolean): React.CSSProperties => ({
     width: '100%',
